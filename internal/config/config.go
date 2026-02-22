@@ -43,6 +43,6 @@ func MustLoad() *Config {
 
 func defaultConfig() *Config {
 	return &Config{
-		BindAddr: "127.0.0.1:9000",
+		BindAddr: "127.0.0.1:9429",
 	}
 }

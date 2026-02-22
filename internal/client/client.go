@@ -15,7 +15,7 @@ func init() {
 }
 
 func Put(key, value string) error {
-	endpoint := fmt.Sprintf("http://localhost:9000/api/v1/%s", key)
+	endpoint := fmt.Sprintf("http://localhost:9429/api/v1/%s", key)
 	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, endpoint, bytes.NewReader([]byte(value)))
 	if err != nil {
 		return fmt.Errorf("error creating post request: %w", err)
@@ -25,7 +25,7 @@ func Put(key, value string) error {
 }
 
 func Get(key string) (string, error) {
-	endpoint := fmt.Sprintf("http://localhost:9000/api/v1/%s", key)
+	endpoint := fmt.Sprintf("http://localhost:9429/api/v1/%s", key)
 	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, endpoint, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating get request: %w", err)
