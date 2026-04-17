@@ -2,18 +2,17 @@
 A key-value store implemented from scratch, inspired by concepts from Designing Data-Intensive Applications.
 
 ## Phase One
-- In this phase, the focus will be on storage/retrieval implementation so I'll build this as a Go library and not a standalone database server.
+- In this phase, the focus is an append-only log for storage and retrieval.
 ### Scope
-- Go api to add, update and delete records
+- Append new records to the log
+- Update a key by appending a newer value for the same key
+- Read the latest value for a key by scanning the log from the end
 ### Out of Scope
-- Database servers
+- Delete support
 - Query languages
 - Transactions
 - Concurrency control
 
 ### API
-* type JunkDB: instance of the database
-* func New(filePath): creates a new database connection. If file doesn't exist, a new one is created.
-* *JunkDB.Update(key, value): inserts or updates a key
-* *JunkDB.Read(key): gets the value stored at key or 
-
+- `put <key> <value>` appends a record to the log
+- `get <key>` returns the newest value for that key

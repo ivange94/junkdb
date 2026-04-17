@@ -3,25 +3,29 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 type Config struct {
 	BindAddr string `json:"bind_addr"`
 }
 
+const DefaultBindAddr = "127.0.0.1:21911"
+const appDirName = ".junkdb"
+const dataFileName = "data"
+const configFileName = "config.json"
+
 func MustLoad() *Config {
-	home, err := os.UserHomeDir()
+	configDir, err := Dir()
 	if err != nil {
 		panic(err)
 	}
-	configLocation := path.Join(home, ".junkdb")
-	err = os.MkdirAll(configLocation, os.ModePerm) // create path if doesn't exist
-	if err != nil {
+	if err := os.MkdirAll(configDir, os.ModePerm); err != nil {
 		panic(err)
 	}
-	configFilePath := path.Join(configLocation, "config.json") //TODO: make this customizable?
+	configFilePath := filepath.Join(configDir, configFileName)
 	_, err = os.Stat(configFilePath)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		return defaultConfig()
@@ -38,11 +42,34 @@ func MustLoad() *Config {
 	if err != nil {
 		panic(err)
 	}
+	applyDefaults(&cfg)
 	return &cfg
 }
 
 func defaultConfig() *Config {
-	return &Config{
-		BindAddr: "127.0.0.1:9429",
+	cfg := &Config{}
+	applyDefaults(cfg)
+	return cfg
+}
+
+func applyDefaults(cfg *Config) {
+	if cfg.BindAddr == "" {
+		cfg.BindAddr = DefaultBindAddr
 	}
+}
+
+func Dir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory: %w", err)
+	}
+	return filepath.Join(home, appDirName), nil
+}
+
+func DataFilePath() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, dataFileName), nil
 }

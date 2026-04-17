@@ -3,38 +3,66 @@ package client
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+
+	"github.com/ivange94/junkdb/internal/config"
 )
 
-var httpClient *http.Client
-
-func init() {
-	httpClient = &http.Client{}
+type Client struct {
+	baseURL    string
+	httpClient *http.Client
 }
 
-func Put(key, value string) error {
-	endpoint := fmt.Sprintf("http://localhost:9429/api/v1/%s", key)
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodPost, endpoint, bytes.NewReader([]byte(value)))
-	if err != nil {
-		return fmt.Errorf("error creating post request: %w", err)
+func New(cfg *config.Config) *Client {
+	return &Client{
+		baseURL:    fmt.Sprintf("http://%s", cfg.BindAddr),
+		httpClient: &http.Client{},
 	}
-	_, err = httpClient.Do(req)
-	return err
 }
 
-func Get(key string) (string, error) {
-	endpoint := fmt.Sprintf("http://localhost:9429/api/v1/%s", key)
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, endpoint, nil)
+func (c *Client) Put(ctx context.Context, key, value string) error {
+	endpoint := fmt.Sprintf("%s/api/v1/%s", c.baseURL, key)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader([]byte(value)))
 	if err != nil {
-		return "", fmt.Errorf("error creating get request: %w", err)
+		return fmt.Errorf("create post request: %w", err)
 	}
 
-	resp, err := httpClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error fetching value: %w", err)
+		return fmt.Errorf("send put request: %w", err)
 	}
-	var value string
-	return value, json.NewDecoder(resp.Body).Decode(&value)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode >= http.StatusBadRequest {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("put failed with status %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}
+
+func (c *Client) Get(ctx context.Context, key string) (string, error) {
+	endpoint := fmt.Sprintf("%s/api/v1/%s", c.baseURL, key)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return "", fmt.Errorf("create get request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetch value: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read response body: %w", err)
+	}
+	if resp.StatusCode >= http.StatusBadRequest {
+		return "", fmt.Errorf("get failed with status %d: %s", resp.StatusCode, string(body))
+	}
+	return string(body), nil
 }
